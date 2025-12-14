@@ -31,7 +31,8 @@ jobs:
           file: ./vendor/laravel/sail/runtimes/8.5/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/laravel-app:latest
-            ghcr.io/${{ github.repository }}/laravel-app:${{ github.sha }}
+            ghcr.io/deady007/po-assist/laravel-app:latest
+            ghcr.io/deady007/po-assist/laravel-app:${{ github.sha }}
+
           build-args: |
             WWWGROUP=1000
