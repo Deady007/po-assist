@@ -27,8 +27,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./vendor/laravel/sail/runtimes/8.5
-          file: ./vendor/laravel/sail/runtimes/8.5/Dockerfile
+          context: .
+          file: ./docker/app/Dockerfile
           push: true
           tags: |
             ghcr.io/deady007/po-assist/laravel-app:latest
