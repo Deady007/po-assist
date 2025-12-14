@@ -21,6 +21,15 @@ return [
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash-lite'),
+        'temperature' => (float) env('GEMINI_TEMPERATURE', 0.3),
+        'max_tokens' => (int) env('GEMINI_MAX_TOKENS', 1200),
+        'verify' => (bool) env('GEMINI_VERIFY_SSL', true),
+        'ca_bundle' => env('GEMINI_CA_BUNDLE'),
+    ],
+
 
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
