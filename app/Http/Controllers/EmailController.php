@@ -21,12 +21,13 @@ class EmailController extends Controller
     {
         $data = $request->validate([
             'project_id'   => 'required|integer|exists:projects,id',
-            'tone'         => 'required|in:formal,executive,neutral',
-            'date'         => 'required|string',
-            'completed'    => 'required|string',
-            'in_progress'  => 'required|string',
-            'risks'        => 'required|string',
-            'review_topics'=> 'required|string',
+            'tone'         => 'sometimes|in:formal,executive,neutral',
+            'date'         => 'sometimes|string',
+            'completed'    => 'sometimes|string|nullable',
+            'in_progress'  => 'sometimes|string|nullable',
+            'risks'        => 'sometimes|string|nullable',
+            'review_topics'=> 'sometimes|string|nullable',
+            'highlights'   => 'sometimes|string|nullable',
         ]);
 
         $project = Project::findOrFail($data['project_id']);
@@ -37,33 +38,49 @@ class EmailController extends Controller
 
         // What we pass to prompt
         $promptInputs = [
-            'tone'         => $data['tone'],
+            'tone'         => $data['tone'] ?? 'formal',
             'project_name' => $project->name,
-            'date'         => $data['date'],
-            'completed'    => $data['completed'],
-            'in_progress'  => $data['in_progress'],
-            'risks'        => $data['risks'],
-            'review_topics'=> $data['review_topics'],
+            'date'         => $data['date'] ?? now()->toDateString(),
+            'completed'    => $data['completed'] ?? '',
+            'in_progress'  => $data['in_progress'] ?? '',
+            'risks'        => $data['risks'] ?? '',
+            'review_topics'=> $data['review_topics'] ?? '',
+            'highlights'   => $data['highlights'] ?? '',
         ];
 
         $artifact = $svc->generateProductUpdateAndStore(
             $project->id,
-            $data['tone'],
+            $promptInputs['tone'],
             $inputForStorage,
             $promptInputs
         );
 
-        return view('emails.result', compact('artifact', 'project'));
+        return view('emails.result', [
+            'artifact' => $artifact,
+            'project'  => $project,
+            'heading'  => 'Product Update Email',
+            'typeLabel'=> 'PRODUCT_UPDATE',
+        ]);
     }
 
     public function history()
     {
         $items = EmailArtifact::with('project')
             ->orderByDesc('created_at')
-            ->limit(50)
+            ->limit(120)
             ->get();
 
-        return view('history.index', compact('items'));
+        $grouped = $items->groupBy(function ($it) {
+            return $it->project?->name ?? 'Unassigned';
+        })->map(function ($projectGroup) {
+            return $projectGroup->groupBy('type')->map(function ($typeGroup) {
+                return $typeGroup->sortByDesc('created_at');
+            });
+        });
+
+        return view('history.index', [
+            'grouped' => $grouped,
+        ]);
     }
 
     public function historyShow(int $id)

@@ -2,6 +2,8 @@
 
 namespace App\Console;
 
+use App\Console\Commands\DriveProvisionCommand;
+use App\Console\Commands\DriveVerifyCommand;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -14,6 +16,8 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         \App\Console\Commands\GeminiTest::class,
+        DriveProvisionCommand::class,
+        DriveVerifyCommand::class,
     ];
 
     /**

@@ -73,3 +73,67 @@ cd /mnt/c/Users/Parmar\ Viral\ V/po-assist
 ./vendor/bin/sail up -d
 ```
 
+## Google Drive Integration (Phase 3)
+
+Single-admin Google Drive connectivity with per-project folders and uploads.
+
+1) Create OAuth client  
+- In Google Cloud Console, create OAuth client (type: Web).  
+- Add redirect URI: `http://localhost/drive/oauth/callback`.  
+- Enable the Drive API.  
+- Keep the client ID/secret handy.
+
+2) Configure `.env`  
+Set the following keys:  
+`GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, `GOOGLE_DRIVE_REDIRECT_URI`, `GOOGLE_DRIVE_REFRESH_TOKEN` (blank until obtained), `GOOGLE_DRIVE_ROOT_FOLDER_ID` (optional parent), `GOOGLE_DRIVE_APP_NAME`, `GOOGLE_DRIVE_SCOPE` (`https://www.googleapis.com/auth/drive.file` by default).
+
+3) Obtain refresh token  
+- Visit `/drive/connect` and click **Connect Google Drive**.  
+- Approve consent (prompt forces offline access).  
+- Copy the refresh token shown on the callback page and paste it into `GOOGLE_DRIVE_REFRESH_TOKEN` in `.env`, then reload the app.
+
+4) Provision project folders  
+- UI: `/projects/{id}/drive` -> **Provision Drive Folders**.  
+- CLI: `php artisan drive:provision {projectId?}` (omit ID to provision all).
+- Verify: `php artisan drive:verify {projectId}` to check stored IDs still exist.
+
+5) Upload or link files  
+- UI: `/projects/{id}/drive` upload form (phase, entity_type, optional entity_id + file).  
+- API: `POST /api/projects/{id}/drive/upload` (multipart) or `POST /api/projects/{id}/drive/link` with a Drive file ID.  
+- List files: `GET /api/projects/{id}/drive/files?phase_key=...&entity_type=...`.
+
+## Phase 4 (Workflow Modules & Validation Reports)
+
+- API envelope helper: `App\Support\ApiResponse::success|failure` used across controllers.
+- Warnings: `GET /api/projects/{id}/warnings` (phase overdue, missing folders, blocking bugs, etc.).
+- Requirements & RFP: `GET/POST /api/projects/{id}/requirements`, `PUT/DELETE /requirements/{rid}`, RFP upload/link via `/rfp-documents/upload|link`. UI: `/projects/{id}/requirements`.
+- Data collection: `GET/POST /api/projects/{id}/data-items`, `PUT/DELETE /data-items/{id}`, upload files `/data-items/{id}/upload`. UI: `/projects/{id}/data-items`.
+- Master data changes: `GET/POST /api/projects/{id}/master-data-changes`, `PUT/DELETE /master-data-changes/{id}`. UI: `/projects/{id}/master-data`.
+- Developers/Assignments/Bugs: `GET/POST /api/developers`, assignments `/api/projects/{id}/assignments`, bugs `/api/projects/{id}/bugs`. UI: `/developers`, `/projects/{id}/assignments`, `/projects/{id}/bugs`.
+- Testing: testers `/api/testers`, test cases `/api/projects/{id}/test-cases`, test runs `/api/projects/{id}/test-runs`, results `/test-runs/{run}/results`, coverage `/testing/coverage`. UI: `/projects/{id}/testing`.
+- Delivery & tokens: delivery `/api/projects/{id}/delivery`, wallet `/api/projects/{id}/token-wallet`, requests `/api/projects/{id}/token-requests` + `/transition`. UI: `/projects/{id}/tokens`.
+- Validation reports: `POST /api/projects/{id}/validation-reports/generate` (optional `include_ai_summary`), list `/validation-reports`, upload to Drive `/validation-reports/{report}/upload-to-drive`. UI: `/projects/{id}/validation-reports`.
+
+Quick local testing flow:
+1. Set a project_id via dashboard selector (persists in nav), then visit module pages above.
+2. Add developers/testers, create requirements and assignments.
+3. Add data items and upload a file (goes to Drive DATA_COLLECTION folder).
+4. Log bugs/test cases/test runs; add results (FAIL can auto-create bugs).
+5. Record delivery + token wallet/requests.
+6. Generate validation report and upload to Drive (phase DELIVERY). Check warnings endpoint to confirm blockers.
+
+## Phase 5 (AI Layer)
+
+- New tables: `ai_prompts` (versioned prompt registry) and `ai_runs` (observability).
+- Models/Services: `AiPrompt`, `AiRun`, `AiPromptRepository`, `AiOrchestratorService`, `ContextBuilderService`, `AiSchemaValidator`.
+- Strict JSON generation with one-shot repair via updated `GeminiClient::generateJsonStrict`.
+- Config: `.env` supports `GEMINI_MODEL_FAST`, `GEMINI_MODEL_PRO`, `GEMINI_CACHE_MINUTES` plus existing Gemini keys.
+- Seed prompts: `php artisan migrate` then `php artisan db:seed --class=AiPromptSeeder`.
+- Email/MoM/HR generators now pull DB context automatically and log ai_runs; minimal inputs accepted (project + key timing fields).
+- Validation report executive summary now uses orchestrator with schema enforcement.
+
+Testing examples:
+- Product update (minimal): `POST /emails/product-update` with `project_id` and optional `highlights`; context auto-enriched.
+- HR EOD: `POST /emails/hr-update` with `project_id` only (date defaults today).
+- Meeting schedule: `POST /emails/meeting-schedule` with `project_id`, `meeting_datetime`, `duration`; agenda inferred from warnings/open blockers.
+- Validation exec summary: `POST /api/projects/{id}/validation-reports/generate` with `include_ai_summary=true`.

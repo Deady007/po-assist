@@ -1,22 +1,40 @@
 @extends('layout')
 
 @section('content')
-  <h2>History Item</h2>
+  <h2>History Detail</h2>
+  <p class="subhead">Project: <strong>{{ $artifact->project?->name }}</strong> | {{ $artifact->created_at }}</p>
 
-  <div class="card">
-    <div><strong>Type:</strong> {{ $artifact->type }}</div>
-    <div><strong>Project:</strong> {{ $artifact->project?->name }}</div>
-    <div><strong>Created:</strong> {{ $artifact->created_at }}</div>
-  </div>
+  <div class="card stacked">
+    @php
+      $colors = [
+        'PRODUCT_UPDATE' => 'blue',
+        'MEETING_SCHEDULE' => 'green',
+        'MOM_FINAL' => 'amber',
+        'HR_UPDATE' => 'rose',
+      ];
+      $badge = $colors[$artifact->type] ?? 'blue';
+    @endphp
 
-  <div class="card">
+    <div class="row" style="align-items:center;">
+      <div class="col">
+        <span class="badge {{ $badge }}">{{ $artifact->type }}</span>
+        <span class="pill-tag">Tone: {{ $artifact->tone }}</span>
+      </div>
+      <div class="col" style="text-align:right;">
+        <div class="muted">Created {{ $artifact->created_at }}</div>
+      </div>
+    </div>
+
     <label>Subject</label>
-    <textarea id="subject" rows="2">{{ $artifact->subject }}</textarea>
-    <button type="button" onclick="copyFrom('subject')">Copy Subject</button>
+    <textarea id="subject" rows="2" readonly>{{ $artifact->subject }}</textarea>
 
-    <label style="margin-top:16px;">Body</label>
-    <textarea id="body" rows="18">{{ $artifact->body_text }}</textarea>
-    <button type="button" onclick="copyFrom('body')">Copy Body</button>
+    <label>Body</label>
+    <textarea id="body" rows="16" readonly>{{ $artifact->body_text }}</textarea>
+
+    <div class="row" style="justify-content:flex-end;">
+      <button class="btn secondary" type="button" onclick="copyFrom('subject')">Copy Subject</button>
+      <button class="btn secondary" type="button" onclick="copyFrom('body')">Copy Body</button>
+    </div>
   </div>
 
   <script>
