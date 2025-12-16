@@ -2,16 +2,53 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\Blameable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Project extends Model
 {
+    use SoftDeletes, Blameable;
+
     protected $fillable = [
+        'project_code',
+        'client_id',
         'name',
+        'description',
+        'status_id',
+        'start_date',
+        'due_date',
+        'priority',
+        'owner_user_id',
+        'is_active',
+        'created_by',
+        'updated_by',
         'client_name',
     ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'due_date' => 'date',
+        'is_active' => 'boolean',
+    ];
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(ProjectStatus::class, 'status_id');
+    }
+
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_user_id');
+    }
 
     public function phases(): HasMany
     {
@@ -91,5 +128,15 @@ class Project extends Model
     public function emailArtifacts(): HasMany
     {
         return $this->hasMany(EmailArtifact::class);
+    }
+
+    public function team(): HasMany
+    {
+        return $this->hasMany(ProjectTeam::class);
+    }
+
+    public function modules(): HasMany
+    {
+        return $this->hasMany(ProjectModule::class);
     }
 }

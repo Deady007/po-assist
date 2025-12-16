@@ -7,8 +7,8 @@ use App\Services\AiSchemaValidator;
 
 class GeminiClient
 {
-    private const DEFAULT_FAST_MODEL = 'gemini-1.5-flash';
-    private const DEFAULT_PRO_MODEL = 'gemini-2.5-FLASH';
+    private const DEFAULT_FAST_MODEL = 'gemini-2.5-flash';
+    private const DEFAULT_PRO_MODEL = 'gemini-2.5-flash';
 
     /**
      * Calls Gemini generateContent and returns the raw text produced by the model.

@@ -17,8 +17,17 @@
     }
     * { box-sizing: border-box; }
     body { margin:0; font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--ink); }
-    a { color: var(--accent); text-decoration: none; }
+    a { color: var(--ink); text-decoration: none; }
     a:hover { text-decoration: underline; }
+    .app-shell { display:flex; min-height:100vh; }
+    .sidebar { width: 240px; background:#0b1021; color:#e2e8f0; padding:18px 16px; position:sticky; top:0; height:100vh; }
+    .sidebar .brand { color:#fff; font-weight:800; display:flex; align-items:center; gap:8px; margin-bottom:18px; }
+    .pill { background: var(--accent-2); color: #fff; padding: 2px 10px; border-radius: 999px; font-size: 12px; }
+    .nav-section { margin-top:18px; }
+    .nav-label { font-size:12px; letter-spacing:0.6px; color:#94a3b8; text-transform:uppercase; margin-bottom:8px; }
+    .nav-link { display:flex; align-items:center; padding:10px 12px; border-radius:10px; color:#e2e8f0; }
+    .nav-link:hover { background: rgba(255,255,255,0.06); text-decoration:none; }
+    .main { flex:1; display:flex; flex-direction:column; min-height:100vh; }
     .topbar {
       position: sticky;
       top: 0;
@@ -26,17 +35,21 @@
       background: rgba(255,255,255,0.9);
       backdrop-filter: blur(6px);
       border-bottom: 1px solid var(--border);
-      padding: 14px 28px;
+      padding: 14px 22px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap:16px;
     }
-    .brand { font-weight: 700; letter-spacing: 0.3px; display: flex; align-items: center; gap: 10px; }
-    .pill { background: var(--accent-2); color: #fff; padding: 2px 10px; border-radius: 999px; font-size: 12px; }
-    .topnav { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-    .topnav a { padding: 8px 12px; border-radius: 10px; font-weight: 600; color: var(--ink); border: 1px solid transparent; }
-    .topnav a:hover { background: #eef7ff; border-color: var(--border); text-decoration: none; }
-    main.container { max-width: 1100px; margin: 32px auto 48px; padding: 0 24px; }
+    .search-box { flex:1; display:flex; align-items:center; gap:10px; }
+    .search-box input { width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); }
+    .top-actions { display:flex; align-items:center; gap:10px; }
+    .dropdown { position:relative; }
+    .dropdown-menu { position:absolute; top:calc(100% + 6px); right:0; background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 18px 40px rgba(15,23,42,0.12); min-width:220px; display:none; padding:10px; }
+    .dropdown-menu a { display:block; padding:8px 10px; border-radius:8px; color:var(--ink); }
+    .dropdown-menu a:hover { background:#f1f5f9; text-decoration:none; }
+    .dropdown.open .dropdown-menu { display:block; }
+    main.content { width:100%; max-width:1100px; margin:24px auto 40px; padding: 0 24px 80px; }
     h1, h2, h3 { margin: 0 0 10px; }
     .subhead { color: var(--muted); margin-bottom: 24px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: 0 10px 30px rgba(15,23,42,0.05); }
@@ -81,11 +94,7 @@
     .pill-tag { background: #f1f5f9; color: var(--muted); padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; }
     .section-title { font-size: 16px; font-weight: 800; margin-bottom: 10px; }
     .stacked > * + * { margin-top: 18px; }
-    .stepper { display:flex; gap:14px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
-    .step { display:flex; align-items:center; gap:8px; }
-    .step-circle { width:28px; height:28px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-weight:700; }
-    .step.active .step-circle { background: var(--accent); color:#fff; border-color: var(--accent); }
-    .step.completed .step-circle { background: #22c55e; color:#fff; border-color:#22c55e; }
+    .page-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
     .loading-overlay[hidden] { display: none !important; }
     .loading-overlay {
       position: fixed; inset:0; background: rgba(15,23,42,0.55);
@@ -100,37 +109,82 @@
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <span>PO Assist</span>
-      <span class="pill">AI</span>
-    </div>
-    <div class="topnav">
-      <a href="{{ route('dashboard') }}">Dashboard</a>
-      <a href="{{ route('emails.product.form') }}" data-attach-project>Product Update</a>
-      <a href="{{ route('emails.meeting.form') }}" data-attach-project>Meeting Schedule</a>
-      <a href="{{ route('emails.mom.draft.form') }}" data-attach-project>MoM</a>
-      <a href="{{ route('emails.hr.form') }}" data-attach-project>HR End-of-Day</a>
-      <a href="#" data-project-path="/projects/{id}/requirements">Workflow</a>
-      <a href="{{ route('drive.connect') }}">Drive</a>
-      <a href="{{ route('history') }}" data-attach-project>History</a>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span>PO Assist</span>
+        <span class="pill">MVP</span>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Dashboards</div>
+        <a class="nav-link" href="{{ route('dashboard') }}">Workspace</a>
+        <a class="nav-link" href="{{ route('dashboard.product') }}">Product</a>
+        <a class="nav-link" href="{{ route('dashboard.tasks') }}">Tasks</a>
+        <a class="nav-link" href="{{ route('dashboard.workload') }}">Workload</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Projects</div>
+        <a class="nav-link" href="{{ route('admin.projects.index') }}">All projects</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Clients</div>
+        <a class="nav-link" href="{{ route('clients.customers.index') }}">Customers</a>
+        <a class="nav-link" href="{{ route('clients.contacts.index') }}">Contacts</a>
+        @if(auth()->user()?->role?->name === 'Admin')
+          <a class="nav-link" href="{{ route('admin.config.email_templates.index') }}">Email templates</a>
+        @endif
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <form class="search-box" action="{{ route('search') }}" method="GET">
+          <input type="text" name="q" value="{{ request('q') }}" placeholder="Search projects or customers">
+        </form>
+        <div class="top-actions">
+          <div class="dropdown" data-dropdown>
+            <button class="btn secondary" type="button" data-dropdown-toggle>Setup</button>
+            <div class="dropdown-menu">
+              @if(auth()->user()?->role?->name === 'Admin')
+                <a href="{{ route('admin.users.index') }}">Users</a>
+              @endif
+              @if(auth()->user()?->role?->name === 'Admin')
+                <a href="{{ route('admin.config.sequences.index') }}">Sequences</a>
+              @endif
+              @if(auth()->user()?->role?->name === 'Admin')
+                <a href="{{ route('admin.config.statuses.index') }}">Project statuses</a>
+              @endif
+              @if(auth()->user()?->role?->name === 'Admin')
+                <a href="{{ route('admin.import-export.index') }}">Import/Export</a>
+              @endif
+            </div>
+          </div>
+          <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button class="btn secondary" type="submit">Logout</button>
+          </form>
+        </div>
+      </div>
+      <main class="content">
+        @if ($errors->any())
+          <div class="card" style="border-color:#fecdd3;">
+            <strong>Validation errors:</strong>
+            <ul>
+              @foreach ($errors->all() as $e)
+                <li>{{ $e }}</li>
+              @endforeach
+            </ul>
+          </div>
+        @endif
+        @if (session('status'))
+          <div class="card" style="border-color:#bfdbfe;">
+            {{ session('status') }}
+          </div>
+        @endif
+
+        @yield('content')
+      </main>
     </div>
   </div>
-
-  <main class="container">
-    @if ($errors->any())
-      <div class="card" style="border-color:#fecdd3;">
-        <strong>Validation errors:</strong>
-        <ul>
-          @foreach ($errors->all() as $e)
-            <li>{{ $e }}</li>
-          @endforeach
-        </ul>
-      </div>
-    @endif
-
-    @yield('content')
-  </main>
 
   <div id="loadingOverlay" class="loading-overlay" hidden>
     <div class="loading-box">
@@ -140,6 +194,15 @@
   </div>
 
   <script>
+    // Setup dropdown
+    document.querySelectorAll('[data-dropdown]').forEach((dd) => {
+      const toggle = dd.querySelector('[data-dropdown-toggle]');
+      toggle?.addEventListener('click', () => dd.classList.toggle('open'));
+      document.addEventListener('click', (e) => {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+
     // Persist project selection across pages (query param -> localStorage -> forms).
     (function() {
       const params = new URLSearchParams(window.location.search);

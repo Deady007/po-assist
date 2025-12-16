@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\ProjectModule;
+
+class ModuleService
+{
+    public function createModule($data, $project)
+    {
+        $module = ProjectModule::create([
+            'project_id' => $project->id,
+            'name' => $data['name'],
+            'module_name' => $data['module_name'] ?? 'Default Module Name',
+            // ...existing code...
+        ]);
+
+        return $module;
+    }
+}

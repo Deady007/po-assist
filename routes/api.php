@@ -1,5 +1,18 @@
 <?php
 
+use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\ModuleTemplateController;
+use App\Http\Controllers\Api\ProjectModuleController as ApiProjectModuleController;
+use App\Http\Controllers\Api\ProjectController as ApiProjectController;
+use App\Http\Controllers\Api\ProjectStatusController as ApiProjectStatusController;
+use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\TaskController as ApiTaskController;
+use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\SequenceConfigController;
+use App\Http\Controllers\Api\UserController as ApiUserController;
 use App\Http\Controllers\BugsController;
 use App\Http\Controllers\DataItemsController;
 use App\Http\Controllers\DevelopersController;
@@ -17,6 +30,75 @@ use App\Http\Controllers\ValidationReportsController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\WarningsController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+Route::middleware(['api', 'jwt.auth'])->group(function () {
+    Route::get('/users', [ApiUserController::class, 'index'])->middleware('role:Admin');
+    Route::post('/users', [ApiUserController::class, 'store'])->middleware('role:Admin');
+    Route::get('/users/{user}', [ApiUserController::class, 'show'])->middleware('role:Admin');
+    Route::patch('/users/{user}', [ApiUserController::class, 'update'])->middleware('role:Admin');
+    Route::patch('/users/{user}/activate', [ApiUserController::class, 'activate'])->middleware('role:Admin');
+    Route::delete('/users/{user}', [ApiUserController::class, 'destroy'])->middleware('role:Admin');
+
+    Route::get('/customers', [CustomerController::class, 'index']);
+    Route::post('/customers', [CustomerController::class, 'store'])->middleware('role:Admin,PM');
+    Route::get('/customers/{customer}', [CustomerController::class, 'show']);
+    Route::patch('/customers/{customer}', [CustomerController::class, 'update'])->middleware('role:Admin,PM');
+    Route::patch('/customers/{customer}/activate', [CustomerController::class, 'activate'])->middleware('role:Admin,PM');
+
+    Route::get('/contacts', [ContactController::class, 'index']);
+    Route::post('/contacts', [ContactController::class, 'store'])->middleware('role:Admin,PM');
+    Route::get('/contacts/{contact}', [ContactController::class, 'show']);
+    Route::patch('/contacts/{contact}', [ContactController::class, 'update'])->middleware('role:Admin,PM');
+    Route::delete('/contacts/{contact}', [ContactController::class, 'destroy'])->middleware('role:Admin,PM');
+
+    Route::get('/config/sequences', [SequenceConfigController::class, 'index'])->middleware('role:Admin');
+    Route::post('/config/sequences', [SequenceConfigController::class, 'store'])->middleware('role:Admin');
+    Route::patch('/config/sequences/{sequence}', [SequenceConfigController::class, 'update'])->middleware('role:Admin');
+
+    Route::get('/config/project-statuses', [ApiProjectStatusController::class, 'index'])->middleware('role:Admin');
+    Route::post('/config/project-statuses', [ApiProjectStatusController::class, 'store'])->middleware('role:Admin');
+    Route::patch('/config/project-statuses/{project_status}', [ApiProjectStatusController::class, 'update'])->middleware('role:Admin');
+    Route::post('/config/project-statuses/{project_status}/set-default', [ApiProjectStatusController::class, 'setDefault'])->middleware('role:Admin');
+    Route::patch('/config/project-statuses/{project_status}/activate', [ApiProjectStatusController::class, 'activate'])->middleware('role:Admin');
+
+    Route::get('/config/module-templates', [ModuleTemplateController::class, 'index'])->middleware('role:Admin');
+    Route::post('/config/module-templates', [ModuleTemplateController::class, 'store'])->middleware('role:Admin');
+    Route::patch('/config/module-templates/{module_template}', [ModuleTemplateController::class, 'update'])->middleware('role:Admin');
+    Route::patch('/config/module-templates/{module_template}/activate', [ModuleTemplateController::class, 'activate'])->middleware('role:Admin');
+
+    Route::get('/audit', [AuditLogController::class, 'index'])->middleware('role:Admin,PM');
+
+    Route::get('/projects', [ApiProjectController::class, 'index'])->middleware('role:Admin,PM,Developer,Viewer');
+    Route::post('/projects', [ApiProjectController::class, 'store'])->middleware('role:Admin,PM');
+    Route::get('/projects/{project}', [ApiProjectController::class, 'show'])->middleware('role:Admin,PM,Developer,Viewer');
+    Route::patch('/projects/{project}', [ApiProjectController::class, 'update'])->middleware('role:Admin,PM');
+    Route::patch('/projects/{project}/activate', [ApiProjectController::class, 'activate'])->middleware('role:Admin,PM');
+    Route::patch('/projects/{project}/status', [ApiProjectController::class, 'changeStatus'])->middleware('role:Admin,PM');
+    Route::delete('/projects/{project}', [ApiProjectController::class, 'destroy'])->middleware('role:Admin');
+
+    Route::get('/projects/{project}/team', [ApiProjectController::class, 'team'])->middleware('role:Admin,PM,Developer,Viewer');
+    Route::post('/projects/{project}/team', [ApiProjectController::class, 'upsertTeam'])->middleware('role:Admin,PM');
+    Route::delete('/projects/{project}/team/{user_id}', [ApiProjectController::class, 'removeTeamMember'])->middleware('role:Admin,PM');
+
+    Route::post('/projects/{project}/modules/init', [ApiProjectModuleController::class, 'init'])->middleware('role:Admin,PM');
+    Route::get('/projects/{project}/modules', [ApiProjectModuleController::class, 'index'])->middleware('role:Admin,PM,Developer,Viewer');
+    Route::post('/projects/{project}/modules', [ApiProjectModuleController::class, 'store'])->middleware('role:Admin,PM');
+    Route::patch('/modules/{module}', [ApiProjectModuleController::class, 'update'])->middleware('role:Admin,PM');
+    Route::patch('/modules/{module}/activate', [ApiProjectModuleController::class, 'activate'])->middleware('role:Admin,PM');
+
+    Route::get('/tasks', [ApiTaskController::class, 'index'])->middleware('role:Admin,PM,Developer,Viewer');
+    Route::post('/projects/{project}/modules/{module}/tasks', [ApiTaskController::class, 'store'])->middleware('role:Admin,PM');
+    Route::get('/tasks/{task}', [ApiTaskController::class, 'show'])->middleware('role:Admin,PM,Developer,Viewer');
+    Route::patch('/tasks/{task}', [ApiTaskController::class, 'update'])->middleware('role:Admin,PM,Developer');
+    Route::delete('/tasks/{task}', [ApiTaskController::class, 'destroy'])->middleware('role:Admin,PM');
+
+    Route::get('/dashboards/product', [DashboardController::class, 'product'])->middleware('role:Admin,PM,Developer,Viewer');
+    Route::get('/dashboards/tasks', [DashboardController::class, 'tasks'])->middleware('role:Admin,PM,Developer,Viewer');
+
+    Route::get('/search', SearchController::class);
+});
 
 Route::middleware('api')->group(function () {
     Route::get('/developers', [DevelopersController::class, 'index']);
