@@ -4,6 +4,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Console\Commands\GeminiTest;
+use App\Exceptions\AiJsonOutputException;
+use App\Support\ApiResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -33,5 +35,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (AiJsonOutputException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(
+                    ApiResponse::failure([['code' => 'AI_OUTPUT', 'message' => $e->getMessage()]]),
+                    502
+                );
+            }
+
+            return back()
+                ->withInput()
+                ->withErrors(['ai' => $e->getMessage()]);
+        });
     })->create();

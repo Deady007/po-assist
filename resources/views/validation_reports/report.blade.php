@@ -126,7 +126,28 @@
   @if(!empty($report['executive_summary']))
     <div class="section">
       <h2>Executive Summary (AI)</h2>
-      <div>{{ $report['executive_summary'] }}</div>
+      @php $exec = $report['executive_summary']; @endphp
+      @if(is_array($exec))
+        <div>{{ $exec['summary'] ?? '' }}</div>
+        @if(!empty($exec['risks']))
+          <h3>Risks</h3>
+          <ul>
+            @foreach ($exec['risks'] as $r)
+              <li>{{ $r }}</li>
+            @endforeach
+          </ul>
+        @endif
+        @if(!empty($exec['next_steps']))
+          <h3>Next Steps</h3>
+          <ul>
+            @foreach ($exec['next_steps'] as $n)
+              <li>{{ $n }}</li>
+            @endforeach
+          </ul>
+        @endif
+      @else
+        <div>{{ $exec }}</div>
+      @endif
     </div>
   @endif
 </body>

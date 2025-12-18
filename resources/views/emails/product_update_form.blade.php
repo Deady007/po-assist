@@ -25,7 +25,7 @@
       <div class="col">
         @php $toneChoice = old('tone', 'formal'); @endphp
         <label>Tone</label>
-        <select name="tone" required>
+        <select name="tone">
           <option value="formal" @if($toneChoice === 'formal') selected @endif>Formal</option>
           <option value="executive" @if($toneChoice === 'executive') selected @endif>Executive</option>
           <option value="neutral" @if($toneChoice === 'neutral') selected @endif>Neutral</option>
@@ -36,22 +36,31 @@
     <div class="row">
       <div class="col">
         <label>Date</label>
-        <input name="date" value="{{ old('date', date('Y-m-d')) }}" required>
+        <input name="date" value="{{ old('date', date('Y-m-d')) }}">
+        <span class="helper">Optional (defaults to today).</span>
       </div>
       <div class="col">
         <label>Topics for review meeting</label>
-        <textarea name="review_topics" rows="3" required placeholder="- Release readiness\n- Risks to go-live">@if(old('review_topics')){{ old('review_topics') }}@else- @endif</textarea>
+        <textarea name="review_topics" rows="3" placeholder="- Release readiness\n- Risks to go-live">{{ old('review_topics') }}</textarea>
+        <span class="helper">Optional (leave blank to infer from DB warnings).</span>
       </div>
     </div>
 
+    <label>Highlights (optional)</label>
+    <textarea name="highlights" rows="3" placeholder="- Key milestone achieved\n- Stakeholder update">{{ old('highlights') }}</textarea>
+    <span class="helper">Optional short bullets.</span>
+
     <label>Completed (one per line)</label>
-    <textarea name="completed" rows="4" required placeholder="- Shipped X\n- Closed Y">@if(old('completed')){{ old('completed') }}@else- @endif</textarea>
+    <textarea name="completed" rows="4" placeholder="- Shipped X\n- Closed Y">{{ old('completed') }}</textarea>
+    <span class="helper">Optional (leave blank to infer from recent activity).</span>
 
     <label>In Progress (one per line)</label>
-    <textarea name="in_progress" rows="4" required placeholder="- Hardening\n- QA cycle">@if(old('in_progress')){{ old('in_progress') }}@else- @endif</textarea>
+    <textarea name="in_progress" rows="4" placeholder="- Hardening\n- QA cycle">{{ old('in_progress') }}</textarea>
+    <span class="helper">Optional.</span>
 
     <label>Risks / Blockers</label>
-    <textarea name="risks" rows="3" required placeholder="None">@if(old('risks')){{ old('risks') }}@elseNone@endif</textarea>
+    <textarea name="risks" rows="3" placeholder="None">{{ old('risks') }}</textarea>
+    <span class="helper">Optional.</span>
 
     <div class="row" style="align-items:center;">
       <div class="col">

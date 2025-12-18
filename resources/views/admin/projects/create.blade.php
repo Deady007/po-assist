@@ -23,11 +23,13 @@
         </div>
       </div>
       <div>
-        <label>Client</label>
+        <label>Customer</label>
         <select name="client_id" required>
-          <option value="">Select client</option>
-          @foreach($clients as $client)
-            <option value="{{ $client->id }}" @selected(old('client_id') == $client->id)>{{ $client->name }}</option>
+          <option value="">Select customer</option>
+          @foreach($customers as $customer)
+            <option value="{{ $customer['client_id'] }}" @selected(old('client_id') == $customer['client_id'])>
+              {{ $customer['name'] }} ({{ $customer['code'] }})
+            </option>
           @endforeach
         </select>
       </div>

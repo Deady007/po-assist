@@ -76,9 +76,12 @@ class ContextBuilderService
                 'id' => $project->id,
                 'name' => $project->name,
             ],
+            'meeting_title' => $input['meeting_title'] ?? null,
             'meeting_datetime' => $input['meeting_datetime'] ?? null,
             'duration' => $input['duration'] ?? '60 minutes',
-            'attendees' => $input['attendees'] ?? [],
+            'meeting_location_or_link' => $input['meeting_location_or_link'] ?? null,
+            'attendees' => $this->normalizeListInput($input['attendees'] ?? []),
+            'agenda_topics' => $this->normalizeListInput($input['agenda_topics'] ?? []),
             'warnings' => $this->warnings->getWarnings($projectId),
             'agenda_seeds' => $this->agendaSeeds($projectId),
         ];
@@ -95,7 +98,8 @@ class ContextBuilderService
             'project' => ['id' => $project->id, 'name' => $project->name],
             'meeting_title' => $input['meeting_title'] ?? 'Project Sync',
             'meeting_datetime' => $input['meeting_datetime'] ?? now()->toDateTimeString(),
-            'attendees' => $input['attendees'] ?? [],
+            'attendees' => $this->normalizeListInput($input['attendees'] ?? []),
+            'agenda' => $this->normalizeListInput($input['agenda'] ?? []),
             'notes_or_transcript' => $input['notes_or_transcript'] ?? '',
             'prior_product_update' => $lastProductUpdate?->body_text,
             'open_change_requests' => Requirement::where('project_id', $projectId)->where('is_change_request', true)->get(['req_code', 'title']),
@@ -119,13 +123,17 @@ class ContextBuilderService
                 'id' => $p->id,
                 'name' => $p->name,
                 'phase' => $p->currentPhase()?->phase_key,
-                'warnings' => app(WorkflowWarningService::class)->getWarnings($p->id),
+                'warnings' => $this->warnings->getWarnings($p->id),
             ];
         });
 
         return [
             'date' => $date,
             'projects' => $projects,
+            'user_status_per_project' => $input['status_per_project'] ?? null,
+            'user_projects_summary' => $input['projects_summary'] ?? null,
+            'user_people_or_timeline_risks' => $input['people_or_timeline_risks'] ?? null,
+            'user_tomorrow_plan' => $input['tomorrow_plan'] ?? null,
         ];
     }
 
@@ -158,5 +166,25 @@ class ContextBuilderService
             'critical_warnings' => $critical,
             'open_blockers' => $openBugs,
         ];
+    }
+
+    private function normalizeListInput(mixed $value): array
+    {
+        if (is_array($value)) {
+            return array_values(array_filter(array_map(function ($v) {
+                return is_string($v) ? trim($v) : null;
+            }, $value), fn ($v) => is_string($v) && $v !== ''));
+        }
+
+        if (!is_string($value)) {
+            return [];
+        }
+
+        $parts = preg_split('/[\\r\\n,]+/', $value);
+        if (!is_array($parts)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(fn ($p) => trim((string) $p), $parts), fn ($p) => $p !== ''));
     }
 }

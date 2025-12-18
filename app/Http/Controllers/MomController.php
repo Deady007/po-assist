@@ -30,7 +30,7 @@ class MomController extends Controller
             'project_id'          => 'required|integer|exists:projects,id',
             'tone'                => 'sometimes|in:formal,executive,neutral',
             'meeting_title'       => 'sometimes|string|nullable',
-            'meeting_datetime'    => 'required|string',
+            'meeting_datetime'    => 'sometimes|string|nullable',
             'attendees'           => 'sometimes|string|nullable',
             'agenda'              => 'sometimes|string|nullable',
             'notes_or_transcript' => 'required|string',
@@ -45,7 +45,7 @@ class MomController extends Controller
             'tone'                => $data['tone'] ?? 'neutral',
             'project_name'        => $project->name,
             'meeting_title'       => $data['meeting_title'] ?? 'Project Sync',
-            'meeting_datetime'    => $data['meeting_datetime'],
+            'meeting_datetime'    => $data['meeting_datetime'] ?? now()->toDateTimeString(),
             'attendees'           => $data['attendees'] ?? '',
             'agenda'              => $data['agenda'] ?? '',
             'notes_or_transcript' => $data['notes_or_transcript'],
@@ -55,7 +55,7 @@ class MomController extends Controller
             $project->id,
             $inputForStorage,
             $promptInputs,
-            $data['tone']
+            $data['tone'] ?? 'neutral'
         );
 
         return redirect()->route('emails.mom.refine.form', ['draft' => $draft->id]);
@@ -114,7 +114,7 @@ class MomController extends Controller
 
         $refined = $svc->refineMom(
             $draftArtifact->project_id,
-            $data['tone'],
+            $data['tone'] ?? 'formal',
             $inputForStorage,
             $promptInputs
         );
@@ -183,7 +183,7 @@ class MomController extends Controller
 
         $final = $svc->generateMomFinalEmail(
             $refinedArtifact->project_id,
-            $data['tone'],
+            $data['tone'] ?? 'formal',
             $inputForStorage,
             $promptInputs
         );

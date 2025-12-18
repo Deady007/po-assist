@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiJsonOutputException;
 use App\Models\AiRun;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -30,12 +31,14 @@ class AiOrchestratorService
         $model = $options['model'] ?? GeminiClient::proModel();
         $temperature = $options['temperature'] ?? (float) config('services.gemini.temperature', 0.2);
         $contextHash = hash('sha256', json_encode($context));
+        $promptVersion = $promptMeta['version'] ?? null;
 
         // Optional caching within 10 minutes
         $cacheMinutes = (int) config('services.gemini.cache_minutes', 10);
         if ($cacheMinutes > 0) {
             $cached = AiRun::where('task_key', $taskKey)
                 ->where('success', true)
+                ->where('prompt_version', $promptVersion)
                 ->where('input_context_json->context_hash', $contextHash)
                 ->where('created_at', '>=', now()->subMinutes($cacheMinutes))
                 ->orderByDesc('id')
@@ -47,14 +50,28 @@ class AiOrchestratorService
 
         $finalPrompt = $this->buildPrompt($promptMeta, $context, $schema);
         $start = microtime(true);
-        $outputText = '';
+        $outputText = null;
         $parsed = null;
         $error = null;
+        $thrown = null;
+        $promptTokens = null;
+        $outputTokens = null;
 
         try {
-            $parsed = $this->gemini->generateJsonStrict($finalPrompt, $schema, $model, $temperature);
-            $outputText = json_encode($parsed);
+            $result = $this->gemini->generateJsonStrictDetailed($finalPrompt, $schema, $model, $temperature);
+            $parsed = $result['parsed'] ?? null;
+            $outputText = $result['raw_output_text'] ?? null;
+            $promptTokens = $result['prompt_tokens'] ?? null;
+            $outputTokens = $result['output_tokens'] ?? null;
+        } catch (AiJsonOutputException $e) {
+            $thrown = $e;
+            $error = $e->getMessage();
+            $outputText = $e->rawOutputText();
+            $promptTokens = $e->promptTokens();
+            $outputTokens = $e->outputTokens();
+            Log::warning('AI orchestration failed (invalid JSON)', ['task' => $taskKey, 'error' => $error]);
         } catch (\Throwable $e) {
+            $thrown = $e;
             $error = $e->getMessage();
             Log::warning('AI orchestration failed', ['task' => $taskKey, 'error' => $error]);
         }
@@ -63,22 +80,24 @@ class AiOrchestratorService
 
         AiRun::create([
             'task_key' => $taskKey,
-            'prompt_version' => $promptMeta['version'] ?? null,
+            'prompt_version' => $promptVersion,
             'project_id' => $options['project_id'] ?? null,
             'entity_type' => $options['entity_type'] ?? null,
             'entity_id' => $options['entity_id'] ?? null,
             'input_context_json' => array_merge($context, ['context_hash' => $contextHash]),
             'model_name' => $model,
             'temperature' => $temperature,
+            'prompt_tokens' => $promptTokens,
+            'output_tokens' => $outputTokens,
             'latency_ms' => $latencyMs,
             'success' => $error === null,
             'error_message' => $error,
-            'raw_output_text' => $outputText ?: null,
+            'raw_output_text' => $outputText,
             'parsed_output_json' => $parsed,
         ]);
 
         if ($error !== null) {
-            throw new \RuntimeException($error);
+            throw $thrown ?? new \RuntimeException($error);
         }
 
         return $parsed ?? [];

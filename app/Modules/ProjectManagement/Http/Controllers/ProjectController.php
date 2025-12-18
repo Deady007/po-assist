@@ -10,6 +10,10 @@ use App\Models\EmailTemplate;
 use App\Models\Project;
 use App\Models\ProjectStatus;
 use App\Models\ProjectTeam;
+use App\Models\Requirement;
+use App\Models\TestResult;
+use App\Models\Delivery;
+use App\Models\ValidationReport;
 use App\Models\User;
 use App\Modules\ProjectManagement\Http\Requests\ProjectStoreRequest;
 use App\Modules\ProjectManagement\Http\Requests\ProjectUpdateRequest;
@@ -27,11 +31,11 @@ class ProjectController extends Controller
 
     public function create(): View
     {
-        $clients = $this->clientOptions();
+        $customers = $this->customerSelectOptions();
         $statuses = ProjectStatus::orderBy('order_no')->get();
         $users = User::orderBy('name')->get();
 
-        return view('admin.projects.create', compact('clients', 'statuses', 'users'));
+        return view('admin.projects.create', compact('customers', 'statuses', 'users'));
     }
 
     public function index(): View
@@ -107,14 +111,13 @@ class ProjectController extends Controller
     public function edit(int $project): View
     {
         $model = Project::findOrFail($project);
-        // Include soft-deleted clients so existing project links still appear in the dropdown.
-        $clients = $this->clientOptions();
+        $customers = $this->customerSelectOptions();
         $statuses = ProjectStatus::orderBy('order_no')->get();
         $users = User::orderBy('name')->get();
 
         return view('admin.projects.edit', [
             'project' => $model,
-            'clients' => $clients,
+            'customers' => $customers,
             'statuses' => $statuses,
             'users' => $users,
             'teamMembers' => $model->team()->with('user')->get(),
@@ -152,20 +155,288 @@ class ProjectController extends Controller
         return redirect()->route('admin.projects.show', $project)->with('status', 'Project updated');
     }
 
-    public function workflow(int $project): View
+    public function workflow(int $project): RedirectResponse
     {
-        $projectModel = Project::findOrFail($project);
+        return redirect()->route('admin.projects.developer_assign', $project);
+    }
+
+    public function developerAssign(int $project): View
+    {
+        $projectModel = Project::with('client')->findOrFail($project);
         $modules = $this->workflow->listModules($projectModel->id);
         $users = User::orderBy('name')->get();
         $role = auth()->user()?->role?->name ?? '';
 
-        return view('admin.projects.workflow', [
+        $phaseOrder = ['REQUIREMENTS', 'DATA_COLLECTION', 'MASTER_DATA', 'DEVELOPMENT', 'TESTING', 'DELIVERY'];
+        $modulesByPhase = $modules->filter(fn ($m) => $m->phase)->keyBy('phase');
+        $requirementsCount = Requirement::where('project_id', $projectModel->id)->count();
+        $failingTests = TestResult::whereHas('testRun', function ($q) use ($projectModel) {
+            $q->where('project_id', $projectModel->id);
+        })->whereIn('status', ['FAIL', 'BLOCKED'])->count();
+
+        $phaseCards = [];
+        $previousDone = true;
+        foreach ($phaseOrder as $index => $phaseKey) {
+            $module = $modulesByPhase->get($phaseKey) ?? $modules->firstWhere('order_no', $index + 1);
+            $status = $module?->status ?? 'NOT_STARTED';
+            $totalTasks = $module?->total_tasks ?? 0;
+            $doneTasks = $module?->done_tasks ?? 0;
+            $blockedTasks = $module?->blocked_tasks ?? 0;
+            $progress = $totalTasks > 0 ? round(($doneTasks / $totalTasks) * 100) : 0;
+
+            $phaseCards[] = [
+                'key' => $phaseKey,
+                'label' => str_replace('_', ' ', $phaseKey),
+                'module_id' => $module?->id,
+                'status' => $status,
+                'owner' => $module?->owner?->name,
+                'tasks_total' => $totalTasks,
+                'tasks_done' => $doneTasks,
+                'tasks_blocked' => $blockedTasks,
+                'progress' => $progress,
+                'blocked_reason' => $module?->blocker_reason,
+                'order' => $module?->order_no ?? ($index + 1),
+                'can_open' => $previousDone,
+            ];
+
+            $previousDone = $status === 'DONE';
+        }
+
+        $hasBlocked = collect($phaseCards)->contains(fn ($p) => $p['status'] === 'BLOCKED');
+        $hasOverdue = $modules->sum('overdue_tasks') > 0;
+        $health = $hasBlocked ? 'red' : ($hasOverdue ? 'amber' : 'green');
+
+        $deliveryDone = Delivery::where('project_id', $projectModel->id)->exists();
+        $validationExists = ValidationReport::where('project_id', $projectModel->id)->exists();
+        $canDownloadReport = $deliveryDone || $validationExists;
+
+        $projectBadge = 'ACTIVE';
+        if (collect($phaseCards)->every(fn ($p) => $p['status'] === 'NOT_STARTED')) {
+            $projectBadge = 'NOT_STARTED';
+        } elseif (collect($phaseCards)->every(fn ($p) => $p['status'] === 'DONE')) {
+            $projectBadge = 'COMPLETED';
+        } elseif ($hasBlocked) {
+            $projectBadge = 'BLOCKED';
+        }
+
+        return view('admin.projects.developer_assign', [
             'project' => $projectModel,
             'modules' => $modules,
             'users' => $users,
             'role' => $role,
+            'phaseCards' => $phaseCards,
+            'requirementsCount' => $requirementsCount,
+            'failingTests' => $failingTests,
+            'health' => $health,
+            'projectBadge' => $projectBadge,
+            'canDownloadReport' => $canDownloadReport,
             'moduleStatuses' => ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'DONE'],
             'taskStatuses' => ['TODO', 'IN_PROGRESS', 'BLOCKED', 'DONE'],
+        ]);
+    }
+
+    public function requirementsManagement(int $project): View
+    {
+        $projectModel = Project::with('client')->findOrFail($project);
+
+        $requirements = [
+            [
+                'module' => 'Authentication',
+                'name' => 'Login (email + OTP)',
+                'received_on' => now()->subDays(9)->toDateString(),
+                'reference' => 'Client email thread',
+                'responsible' => $projectModel->client?->name ? "{$projectModel->client->name} (Client)" : 'Client (TBD)',
+                'priority' => 'HIGH',
+                'status' => 'NEW',
+            ],
+            [
+                'module' => 'Dashboard',
+                'name' => 'Project overview widgets',
+                'received_on' => now()->subDays(8)->toDateString(),
+                'reference' => 'Kick-off notes',
+                'responsible' => 'PM (You)',
+                'priority' => 'MEDIUM',
+                'status' => 'APPROVED',
+            ],
+            [
+                'module' => 'Developer Assign',
+                'name' => 'Assign tasks to developers by module/page',
+                'received_on' => now()->subDays(7)->toDateString(),
+                'reference' => 'WhatsApp message',
+                'responsible' => 'PM (You)',
+                'priority' => 'HIGH',
+                'status' => 'IN_REVIEW',
+            ],
+            [
+                'module' => 'Testing',
+                'name' => 'Create test tasks from page/module description (AI later)',
+                'received_on' => now()->subDays(6)->toDateString(),
+                'reference' => 'Client call summary',
+                'responsible' => 'QA Lead (TBD)',
+                'priority' => 'MEDIUM',
+                'status' => 'DRAFT',
+            ],
+            [
+                'module' => 'Delivery',
+                'name' => 'Go-live checklist + deployment handover',
+                'received_on' => now()->subDays(5)->toDateString(),
+                'reference' => 'Email: go-live expectations',
+                'responsible' => 'PM (You)',
+                'priority' => 'HIGH',
+                'status' => 'DRAFT',
+            ],
+        ];
+
+        $requirementsByModule = collect($requirements)->groupBy('module')->toArray();
+
+        $srs = [
+            'status' => 'Not generated yet',
+            'version' => 'v0.0',
+            'last_generated_at' => '—',
+        ];
+
+        return view('admin.projects.requirements_management', [
+            'project' => $projectModel,
+            'requirementsByModule' => $requirementsByModule,
+            'srs' => $srs,
+        ]);
+    }
+
+    public function kickoffCall(int $project): View
+    {
+        $projectModel = Project::with('client')->findOrFail($project);
+
+        $kickoff = [
+            'scheduled_at' => now()->addDays(1)->format('Y-m-d 11:00'),
+            'client' => $projectModel->client?->name ?? 'Client (TBD)',
+            'responsible' => 'PM (You)',
+            'agenda' => [
+                'Confirm scope & priorities',
+                'Approve requirements list',
+                'Define timeline & milestones',
+                'Finalize deliverables & communication',
+            ],
+        ];
+
+        $timeline = [
+            ['phase' => 'Requirements freeze', 'from' => now()->addDays(1)->toDateString(), 'to' => now()->addDays(3)->toDateString(), 'owner' => 'PM'],
+            ['phase' => 'Development', 'from' => now()->addDays(4)->toDateString(), 'to' => now()->addDays(18)->toDateString(), 'owner' => 'Dev Lead'],
+            ['phase' => 'Testing', 'from' => now()->addDays(19)->toDateString(), 'to' => now()->addDays(25)->toDateString(), 'owner' => 'QA Lead'],
+            ['phase' => 'Review + Fixes', 'from' => now()->addDays(26)->toDateString(), 'to' => now()->addDays(30)->toDateString(), 'owner' => 'PM'],
+            ['phase' => 'Go-live', 'from' => now()->addDays(31)->toDateString(), 'to' => now()->addDays(31)->toDateString(), 'owner' => 'PM'],
+        ];
+
+        $approvedScope = [
+            ['module' => 'Authentication', 'items' => ['Login (email + OTP)', 'Role-based access']],
+            ['module' => 'Dashboard', 'items' => ['Project health', 'Overdue tasks summary']],
+            ['module' => 'Developer Assign', 'items' => ['Modules + tasks assignment', 'Due dates + blockers']],
+        ];
+
+        $deliverables = [
+            ['name' => 'SRS Document (AI later)', 'status' => 'Planned'],
+            ['name' => 'RFP / Kick-off Summary Doc', 'status' => 'Draft'],
+            ['name' => 'UAT checklist + sign-off', 'status' => 'Planned'],
+        ];
+
+        return view('admin.projects.kickoff_call', [
+            'project' => $projectModel,
+            'kickoff' => $kickoff,
+            'timeline' => $timeline,
+            'approvedScope' => $approvedScope,
+            'deliverables' => $deliverables,
+        ]);
+    }
+
+    public function dataManagement(int $project): View
+    {
+        $projectModel = Project::with('client')->findOrFail($project);
+
+        $folders = [
+            ['name' => '00 Admin', 'path' => '/00-Admin', 'status' => 'Planned', 'last_activity' => '—'],
+            ['name' => '01 Requirements', 'path' => '/01-Requirements', 'status' => 'Planned', 'last_activity' => '—'],
+            ['name' => '02 Designs', 'path' => '/02-Designs', 'status' => 'Planned', 'last_activity' => '—'],
+            ['name' => '03 Data Collection', 'path' => '/03-Data-Collection', 'status' => 'Planned', 'last_activity' => '—'],
+            ['name' => '04 Testing', 'path' => '/04-Testing', 'status' => 'Planned', 'last_activity' => '—'],
+            ['name' => '05 Delivery', 'path' => '/05-Delivery', 'status' => 'Planned', 'last_activity' => '—'],
+        ];
+
+        $intakeLog = [
+            [
+                'received_on' => now()->subDays(3)->toDateString(),
+                'item' => 'Brand assets (logo + colors)',
+                'type' => 'ZIP',
+                'from' => $projectModel->client?->name ?? 'Client',
+                'status' => 'RECEIVED',
+                'notes' => 'Awaiting final logo variant',
+            ],
+            [
+                'received_on' => now()->subDays(2)->toDateString(),
+                'item' => 'Sample data sheet',
+                'type' => 'XLSX',
+                'from' => $projectModel->client?->name ?? 'Client',
+                'status' => 'RECEIVED',
+                'notes' => 'Needs column mapping confirmation',
+            ],
+            [
+                'received_on' => now()->subDay()->toDateString(),
+                'item' => 'Access credentials / staging URL',
+                'type' => 'Text',
+                'from' => 'Client IT',
+                'status' => 'PENDING',
+                'notes' => 'Waiting for whitelist',
+            ],
+        ];
+
+        return view('admin.projects.data_management', [
+            'project' => $projectModel,
+            'folders' => $folders,
+            'intakeLog' => $intakeLog,
+        ]);
+    }
+
+    public function testingAssign(int $project): View
+    {
+        $projectModel = Project::with('client')->findOrFail($project);
+
+        $testingBoard = [
+            ['module' => 'Authentication', 'page' => 'Login', 'task' => 'OTP invalid/expired scenarios', 'assignee' => 'Tester A', 'status' => 'TODO', 'linked_dev_task' => 'DA-12'],
+            ['module' => 'Dashboard', 'page' => 'Overview', 'task' => 'Verify widgets & permissions', 'assignee' => 'Tester B', 'status' => 'IN_PROGRESS', 'linked_dev_task' => 'DA-18'],
+            ['module' => 'Developer Assign', 'page' => 'Module list', 'task' => 'Module status rules (DONE guard)', 'assignee' => 'Tester A', 'status' => 'TODO', 'linked_dev_task' => 'DA-21'],
+            ['module' => 'Developer Assign', 'page' => 'Tasks', 'task' => 'Blocker reason required when BLOCKED', 'assignee' => 'Tester C', 'status' => 'BLOCKED', 'linked_dev_task' => 'DA-23'],
+            ['module' => 'Delivery', 'page' => 'Validation report', 'task' => 'Export/download flow', 'assignee' => 'Tester B', 'status' => 'TODO', 'linked_dev_task' => 'DA-31'],
+        ];
+
+        $statusSummary = collect($testingBoard)->countBy('status')->all();
+
+        return view('admin.projects.testing_assign', [
+            'project' => $projectModel,
+            'testingBoard' => $testingBoard,
+            'statusSummary' => $statusSummary,
+        ]);
+    }
+
+    public function review(int $project): View
+    {
+        $projectModel = Project::with('client')->findOrFail($project);
+
+        $checklist = [
+            ['item' => 'All development tasks completed', 'owner' => 'Dev Lead', 'status' => 'PENDING'],
+            ['item' => 'All test cases executed', 'owner' => 'QA Lead', 'status' => 'PENDING'],
+            ['item' => 'Critical bugs resolved', 'owner' => 'PM', 'status' => 'PENDING'],
+            ['item' => 'User manual drafted', 'owner' => 'PM', 'status' => 'PLANNED'],
+            ['item' => 'Client sign-off received', 'owner' => 'Client', 'status' => 'PLANNED'],
+        ];
+
+        $docs = [
+            ['name' => 'User Manual', 'status' => 'Not generated', 'updated_at' => '—'],
+            ['name' => 'Validation Report', 'status' => 'Not generated', 'updated_at' => '—'],
+            ['name' => 'Release Notes', 'status' => 'Draft', 'updated_at' => now()->toDateString()],
+        ];
+
+        return view('admin.projects.review', [
+            'project' => $projectModel,
+            'checklist' => $checklist,
+            'docs' => $docs,
         ]);
     }
 
@@ -372,5 +643,45 @@ class ProjectController extends Controller
         });
 
         return Client::withTrashed()->orderBy('name')->get();
+    }
+
+    /**
+     * Provide a "Customer" dropdown while still storing `projects.client_id`.
+     * Customers are mirrored into `clients` by `clientOptions()`, and the select value remains the Client ID.
+     *
+     * @return \Illuminate\Support\Collection<int, array{client_id:int,name:string,code:string,is_active:bool}>
+     */
+    private function customerSelectOptions()
+    {
+        $clients = $this->clientOptions();
+        $clientsByCode = $clients->keyBy('client_code');
+
+        $customers = Customer::orderBy('name')->get();
+        $options = $customers->map(function (Customer $customer) use ($clientsByCode) {
+            $client = $clientsByCode->get($customer->customer_code);
+            return [
+                'client_id' => $client?->id,
+                'name' => $customer->name,
+                'code' => $customer->customer_code,
+                'is_active' => (bool) $customer->is_active,
+            ];
+        })->filter(fn ($row) => !empty($row['client_id']));
+
+        // Include any legacy Client entries that don't have a Customer mirror yet.
+        $legacy = $clients->filter(function (Client $client) use ($customers) {
+            return !$customers->contains('customer_code', $client->client_code);
+        })->map(function (Client $client) {
+            return [
+                'client_id' => $client->id,
+                'name' => $client->name,
+                'code' => $client->client_code,
+                'is_active' => (bool) $client->is_active,
+            ];
+        });
+
+        return $options
+            ->merge($legacy)
+            ->unique('client_id')
+            ->values();
     }
 }

@@ -23,7 +23,7 @@
       <div class="col">
         @php $toneChoice = old('tone', 'formal'); @endphp
         <label>Tone</label>
-        <select name="tone" required>
+        <select name="tone">
           <option value="formal" @if($toneChoice === 'formal') selected @endif>Formal</option>
           <option value="executive" @if($toneChoice === 'executive') selected @endif>Executive</option>
           <option value="neutral" @if($toneChoice === 'neutral') selected @endif>Neutral</option>
@@ -34,22 +34,27 @@
     <div class="row">
       <div class="col">
         <label>Date</label>
-        <input name="date" required value="{{ old('date', date('Y-m-d')) }}">
+        <input name="date" value="{{ old('date', date('Y-m-d')) }}">
+        <span class="helper">Optional (defaults to today).</span>
       </div>
       <div class="col">
         <label>Status per project (Green/Amber/Red)</label>
-        <textarea name="status_per_project" rows="3" required placeholder="Project X: Green - on plan\nProject Y: Amber - resourcing gap">{{ old('status_per_project') }}</textarea>
+        <textarea name="status_per_project" rows="3" placeholder="Project X: Green - on plan\nProject Y: Amber - resourcing gap">{{ old('status_per_project') }}</textarea>
+        <span class="helper">Optional (AI can infer from phases/warnings).</span>
       </div>
     </div>
 
     <label>Projects summary (plain language)</label>
-    <textarea name="projects_summary" rows="4" required placeholder="High-level wins, milestones, or blockers.">{{ old('projects_summary') }}</textarea>
+    <textarea name="projects_summary" rows="4" placeholder="High-level wins, milestones, or blockers.">{{ old('projects_summary') }}</textarea>
+    <span class="helper">Optional.</span>
 
     <label>People or timeline risks</label>
-    <textarea name="people_or_timeline_risks" rows="3" required placeholder="- Hiring backfill in progress\n- Client approvals delayed">{{ old('people_or_timeline_risks') }}</textarea>
+    <textarea name="people_or_timeline_risks" rows="3" placeholder="- Hiring backfill in progress\n- Client approvals delayed">{{ old('people_or_timeline_risks') }}</textarea>
+    <span class="helper">Optional.</span>
 
     <label>Tomorrow's plan</label>
-    <textarea name="tomorrow_plan" rows="3" required placeholder="- Close UAT feedback\n- Kick off onboarding for new PM">{{ old('tomorrow_plan') }}</textarea>
+    <textarea name="tomorrow_plan" rows="3" placeholder="- Close UAT feedback\n- Kick off onboarding for new PM">{{ old('tomorrow_plan') }}</textarea>
+    <span class="helper">Optional.</span>
 
     <div class="row" style="align-items:center;">
       <div class="col">

@@ -9,15 +9,21 @@ use App\Models\DriveFile;
 use App\Models\DriveFolder;
 use App\Models\Project;
 use App\Models\RfpDocument;
+use App\Services\AiOrchestratorService;
+use App\Services\ContextBuilderService;
 use App\Services\DriveClient;
+use App\Services\GeminiClient;
 use App\Services\ProjectDriveProvisioner;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class RfpDocumentsController extends ApiController
 {
     public function __construct(
         private DriveClient $drive,
-        private ProjectDriveProvisioner $provisioner
+        private ProjectDriveProvisioner $provisioner,
+        private AiOrchestratorService $ai,
+        private ContextBuilderService $contextBuilder
     ) {
     }
 
@@ -111,5 +117,57 @@ class RfpDocumentsController extends ApiController
         ]);
 
         return $this->success(['item' => $doc->toArray()]);
+    }
+
+    public function extractRequirements(Request $request, int $projectId, int $rfpDocumentId): JsonResponse
+    {
+        $data = $request->validate([
+            'source_text' => 'sometimes|string|nullable',
+            'model' => 'sometimes|string|nullable',
+            'temperature' => 'sometimes|numeric|nullable',
+        ]);
+
+        $project = Project::find($projectId);
+        if (!$project) {
+            return $this->failure([['code' => 'PROJECT_NOT_FOUND', 'message' => 'Project not found']], 404);
+        }
+
+        $doc = RfpDocument::where('project_id', $projectId)->find($rfpDocumentId);
+        if (!$doc) {
+            return $this->failure([['code' => 'RFP_NOT_FOUND', 'message' => 'RFP document not found']], 404);
+        }
+
+        // Allow supplying/persisting raw text (e.g., pasted content from a PDF).
+        if (array_key_exists('source_text', $data)) {
+            $doc->source_text = $data['source_text'];
+            $doc->save();
+        }
+
+        $text = $data['source_text'] ?? $doc->source_text;
+        if (!is_string($text) || trim($text) === '') {
+            return $this->failure([
+                ['code' => 'SOURCE_TEXT_REQUIRED', 'message' => 'Provide source_text or store it on the RFP document before extracting.'],
+            ], 422);
+        }
+
+        $context = $this->contextBuilder->rfpExtraction($text, $projectId);
+        $model = $data['model'] ?? GeminiClient::fastModel();
+        $temperature = isset($data['temperature']) ? (float) $data['temperature'] : null;
+
+        $out = $this->ai->run('RFP_REQUIREMENTS_EXTRACT', $context, [
+            'project_id' => $projectId,
+            'entity_type' => 'rfp_document',
+            'entity_id' => $doc->id,
+            'model' => $model,
+            'temperature' => $temperature,
+        ]);
+
+        $doc->extracted_json = $out;
+        $doc->save();
+
+        return $this->success([
+            'item' => $doc->toArray(),
+            'extracted' => $out,
+        ]);
     }
 }

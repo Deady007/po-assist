@@ -162,7 +162,11 @@ class ValidationReportService
             try {
                 $report['executive_summary'] = $this->buildSummary($report);
             } catch (\Throwable $e) {
-                $report['executive_summary'] = 'Summary unavailable: ' . $e->getMessage();
+                $report['executive_summary'] = [
+                    'summary' => 'Summary unavailable: ' . $e->getMessage(),
+                    'risks' => [],
+                    'next_steps' => [],
+                ];
             }
         }
 
@@ -193,9 +197,14 @@ class ValidationReportService
         return round(($withPass / $requirementCount) * 100, 2);
     }
 
-    private function buildSummary(array $report): string
+    private function buildSummary(array $report): array
     {
         $out = $this->ai->run('VALIDATION_EXEC_SUMMARY', ['report' => $report]);
-        return trim($out['summary'] ?? json_encode($out));
+
+        return [
+            'summary' => trim((string) ($out['summary'] ?? '')),
+            'risks' => is_array($out['risks'] ?? null) ? $out['risks'] : [],
+            'next_steps' => is_array($out['next_steps'] ?? null) ? $out['next_steps'] : [],
+        ];
     }
 }

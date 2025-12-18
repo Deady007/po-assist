@@ -90,10 +90,36 @@ Route::middleware('auth')->group(function () {
         Route::resource('clients', AdminClientController::class)->except(['show', 'create'])->middleware('role:Admin,PM');
 
         Route::get('projects', [AdminProjectController::class, 'index'])->name('projects.index')->middleware('role:Admin,PM,Developer,Viewer');
-        Route::get('projects/{project}', [AdminProjectController::class, 'show'])->name('projects.show')->middleware('role:Admin,PM,Developer,Viewer');
-        Route::get('projects/{project}/workflow', [AdminProjectController::class, 'workflow'])->name('projects.workflow')->middleware('role:Admin,PM,Developer,Viewer');
-        Route::get('projects/{project}/tasks', [AdminProjectController::class, 'tasksView'])->name('projects.tasks')->middleware('role:Admin,PM,Developer,Viewer');
-        Route::get('projects/{project}/emails', [AdminProjectController::class, 'emails'])->name('projects.emails')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}', [AdminProjectController::class, 'show'])
+            ->whereNumber('project')
+            ->name('projects.show')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/developer-assign', [AdminProjectController::class, 'developerAssign'])
+            ->whereNumber('project')
+            ->name('projects.developer_assign')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/requirements-management', [AdminProjectController::class, 'requirementsManagement'])
+            ->whereNumber('project')
+            ->name('projects.requirements_management')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/kickoff-call', [AdminProjectController::class, 'kickoffCall'])
+            ->whereNumber('project')
+            ->name('projects.kickoff_call')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/data-management', [AdminProjectController::class, 'dataManagement'])
+            ->whereNumber('project')
+            ->name('projects.data_management')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/testing-assign', [AdminProjectController::class, 'testingAssign'])
+            ->whereNumber('project')
+            ->name('projects.testing_assign')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/review', [AdminProjectController::class, 'review'])
+            ->whereNumber('project')
+            ->name('projects.review')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/workflow', [AdminProjectController::class, 'workflow'])
+            ->whereNumber('project')
+            ->name('projects.workflow')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/tasks', [AdminProjectController::class, 'tasksView'])
+            ->whereNumber('project')
+            ->name('projects.tasks')->middleware('role:Admin,PM,Developer,Viewer');
+        Route::get('projects/{project}/emails', [AdminProjectController::class, 'emails'])
+            ->whereNumber('project')
+            ->name('projects.emails')->middleware('role:Admin,PM,Developer,Viewer');
         Route::resource('projects', AdminProjectController::class)->except(['index', 'show'])->middleware('role:Admin,PM');
         Route::post('projects/{project}/team', [AdminProjectController::class, 'addTeamMember'])->name('projects.team.store')->middleware('role:Admin,PM');
         Route::delete('projects/{project}/team/{team}', [AdminProjectController::class, 'removeTeamMember'])->name('projects.team.destroy')->middleware('role:Admin,PM');

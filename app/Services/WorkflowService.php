@@ -22,6 +22,7 @@ class WorkflowService
         $existing = 0;
 
         DB::transaction(function () use ($templates, $project, &$created, &$existing) {
+            $nextOrder = (int) ProjectModule::where('project_id', $project->id)->max('order_no');
             foreach ($templates as $tmpl) {
                 $exists = ProjectModule::where('project_id', $project->id)
                     ->where(function ($q) use ($tmpl) {
@@ -35,11 +36,15 @@ class WorkflowService
                     continue;
                 }
 
+                $moduleName = $tmpl->name;
+                $nextOrder = $nextOrder ? $nextOrder + 1 : ($tmpl->order_no ?? 1);
                 $module = ProjectModule::create([
                     'project_id' => $project->id,
                     'template_id' => $tmpl->id,
                     'name' => $tmpl->name,
-                    'order_no' => $tmpl->order_no,
+                    'module_name' => $moduleName,
+                    'phase' => $tmpl->key ? strtoupper(str_replace('-', '_', $tmpl->key)) : null,
+                    'order_no' => $nextOrder,
                     'status' => 'NOT_STARTED',
                     'is_active' => true,
                 ]);
@@ -67,6 +72,7 @@ class WorkflowService
         $modules->transform(function (ProjectModule $module) {
             $total = $module->tasks->count();
             $done = $module->tasks->where('status', 'DONE')->count();
+            $blocked = $module->tasks->where('status', 'BLOCKED')->count();
             $overdue = $module->tasks->where('status', '!=', 'DONE')
                 ->whereNotNull('due_date')
                 ->filter(fn ($t) => $t->due_date < now()->startOfDay())
@@ -74,6 +80,7 @@ class WorkflowService
 
             $module->setAttribute('total_tasks', $total);
             $module->setAttribute('done_tasks', $done);
+            $module->setAttribute('blocked_tasks', $blocked);
             $module->setAttribute('overdue_tasks', $overdue);
 
             return $module;
@@ -84,7 +91,7 @@ class WorkflowService
 
     public function createModule(Project $project, array $data): ProjectModule
     {
-        $order = $data['order_no'] ?? ($project->modules()->max('order_no') + 1);
+        $order = $data['order_no'] ?? (($project->modules()->max('order_no') ?? 0) + 1);
         $status = strtoupper($data['status'] ?? 'NOT_STARTED');
 
         if ($status === 'BLOCKED' && empty($data['blocker_reason'])) {
@@ -95,6 +102,7 @@ class WorkflowService
             'project_id' => $project->id,
             'name' => $data['name'],
             'module_name' => $data['module_name'] ?? ($data['name'] ?? 'Default Module Name'),
+            'phase' => $data['phase'] ?? null,
             'order_no' => $order ?: 1,
             'status' => $status,
             'start_date' => $data['start_date'] ?? null,
@@ -141,6 +149,7 @@ class WorkflowService
         $module->update([
             'name' => $data['name'] ?? $module->name,
             'module_name' => $data['module_name'] ?? $module->module_name ?? $module->name,
+            'phase' => $data['phase'] ?? $module->phase,
             'order_no' => $data['order_no'] ?? $module->order_no,
             'status' => $status ?? $module->status,
             'start_date' => $data['start_date'] ?? $module->start_date,

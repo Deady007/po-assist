@@ -64,9 +64,10 @@ class ImportExportService
                             'field_name' => $field,
                             'error_message' => $message,
                         ]);
-                        $errorCount++;
                     }
                 }
+                // `error_count` is the number of rows with errors, not the total number of validation messages.
+                $errorCount++;
                 continue;
             }
 

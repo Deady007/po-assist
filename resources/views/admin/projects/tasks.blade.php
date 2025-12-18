@@ -6,14 +6,12 @@
       <h1>Tasks — {{ $project->name }}</h1>
       <p class="muted">Filter by module, assignee, status, or overdue. Developers can update only their tasks.</p>
     </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      <a class="btn secondary" href="{{ route('admin.projects.show', $project->id) }}">Overview</a>
-      <a class="btn secondary" href="{{ route('admin.projects.workflow', $project->id) }}">Workflow</a>
-      @if(in_array($role, ['Admin','PM']))
-        <a class="btn" href="{{ route('admin.projects.workflow', $project->id) }}">Add tasks</a>
-      @endif
-    </div>
+    @if(in_array($role, ['Admin','PM']))
+      <a class="btn" href="{{ route('admin.projects.developer_assign', $project->id) }}">Add tasks</a>
+    @endif
   </div>
+
+  @include('admin.projects._subnav', ['project' => $project, 'role' => $role])
 
   <form method="GET" class="card grid two" style="align-items:flex-end;">
     <div>
@@ -59,7 +57,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
       <div>
         <h3 style="margin:0;">Tasks ({{ $tasks->total() }})</h3>
-        <p class="muted">Quick status edits inline. Use workflow tab for module context.</p>
+        <p class="muted">Quick status edits inline. Use Developer Assign tab for module context.</p>
       </div>
     </div>
     <div class="stacked">

@@ -17,8 +17,8 @@ class ProjectStatusServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        if (!in_array('sqlite', \PDO::getAvailableDrivers(), true)) {
-            $this->markTestSkipped('pdo_sqlite driver missing');
+        if (!in_array('mysql', \PDO::getAvailableDrivers(), true)) {
+            $this->markTestSkipped('pdo_mysql driver missing');
         }
 
         parent::setUp();

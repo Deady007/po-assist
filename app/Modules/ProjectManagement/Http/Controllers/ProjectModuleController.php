@@ -33,7 +33,7 @@ class ProjectModuleController extends Controller
 
         $this->workflow->createModule($projectModel, $data + ['created_by' => auth()->id()]);
 
-        return redirect()->route('admin.projects.workflow', $project)->with('status', 'Module added');
+        return redirect()->route('admin.projects.developer_assign', $project)->with('status', 'Module added');
     }
 
     public function update(ProjectModuleRequest $request, int $project, int $module): RedirectResponse
@@ -52,7 +52,7 @@ class ProjectModuleController extends Controller
             $message .= ' (warnings: ' . implode('; ', $warnings) . ')';
         }
 
-        return redirect()->route('admin.projects.workflow', $project)->with('status', $message);
+        return redirect()->route('admin.projects.developer_assign', $project)->with('status', $message);
     }
 
     public function destroy(int $project, int $module): RedirectResponse
@@ -60,6 +60,6 @@ class ProjectModuleController extends Controller
         $model = ProjectModule::where('project_id', $project)->findOrFail($module);
         $model->delete();
 
-        return redirect()->route('admin.projects.workflow', $project)->with('status', 'Module removed');
+        return redirect()->route('admin.projects.developer_assign', $project)->with('status', 'Module removed');
     }
 }

@@ -20,8 +20,8 @@ class WorkflowServiceTest extends TestCase
 
     protected function refreshDatabase(): void
     {
-        if (!in_array('sqlite', \PDO::getAvailableDrivers(), true)) {
-            $this->markTestSkipped('pdo_sqlite driver missing');
+        if (!in_array('mysql', \PDO::getAvailableDrivers(), true)) {
+            $this->markTestSkipped('pdo_mysql driver missing');
         }
 
         $this->baseRefreshDatabase();

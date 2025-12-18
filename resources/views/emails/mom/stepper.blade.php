@@ -37,7 +37,7 @@
           <div class="col">
             @php $toneChoice = old('tone', 'formal'); @endphp
             <label>Tone</label>
-            <select name="tone" required>
+            <select name="tone">
               <option value="formal" @if($toneChoice === 'formal') selected @endif>Formal</option>
               <option value="executive" @if($toneChoice === 'executive') selected @endif>Executive</option>
               <option value="neutral" @if($toneChoice === 'neutral') selected @endif>Neutral</option>
@@ -48,22 +48,26 @@
         <div class="row">
           <div class="col">
             <label>Meeting title</label>
-            <input name="meeting_title" required placeholder="Sprint review" value="{{ old('meeting_title') }}">
+            <input name="meeting_title" placeholder="Sprint review" value="{{ old('meeting_title') }}">
+            <span class="helper">Optional (defaults to Project Sync).</span>
           </div>
           <div class="col">
             <label>Meeting date & time</label>
-            <input name="meeting_datetime" required placeholder="2025-12-15 16:00 UTC" value="{{ old('meeting_datetime') }}">
+            <input name="meeting_datetime" placeholder="2025-12-15 16:00 UTC" value="{{ old('meeting_datetime') }}">
+            <span class="helper">Optional (defaults to now).</span>
           </div>
         </div>
 
         <div class="row">
           <div class="col">
             <label>Attendees</label>
-            <textarea name="attendees" rows="3" required placeholder="PM, Eng Lead, QA, Client Partner">{{ old('attendees') }}</textarea>
+            <textarea name="attendees" rows="3" placeholder="PM, Eng Lead, QA, Client Partner">{{ old('attendees') }}</textarea>
+            <span class="helper">Optional.</span>
           </div>
           <div class="col">
             <label>Agenda</label>
-            <textarea name="agenda" rows="3" required placeholder="- Demo highlights\n- Blockers\n- Next sprint goals">{{ old('agenda') }}</textarea>
+            <textarea name="agenda" rows="3" placeholder="- Demo highlights\n- Blockers\n- Next sprint goals">{{ old('agenda') }}</textarea>
+            <span class="helper">Optional.</span>
           </div>
         </div>
 
@@ -120,14 +124,14 @@
           @csrf
           <div class="row">
             @php $refineTone = old('tone', 'formal'); @endphp
-            <div class="col">
-              <label>Tone</label>
-              <select name="tone" required>
-                <option value="formal" @if($refineTone === 'formal') selected @endif>Formal</option>
-                <option value="executive" @if($refineTone === 'executive') selected @endif>Executive</option>
-                <option value="neutral" @if($refineTone === 'neutral') selected @endif>Neutral</option>
-              </select>
-            </div>
+          <div class="col">
+            <label>Tone</label>
+            <select name="tone">
+              <option value="formal" @if($refineTone === 'formal') selected @endif>Formal</option>
+              <option value="executive" @if($refineTone === 'executive') selected @endif>Executive</option>
+              <option value="neutral" @if($refineTone === 'neutral') selected @endif>Neutral</option>
+            </select>
+          </div>
             <div class="col">
               <label>Product update context (optional)</label>
               <textarea name="product_update_context" rows="3" placeholder="Latest release, roadmap context, etc.">{{ old('product_update_context') }}</textarea>
@@ -169,16 +173,16 @@
         <div class="row">
           <div class="col">
             <label>Meeting title</label>
-            <input name="meeting_title" required value="{{ old('meeting_title', $draft?->input_json['meeting_title'] ?? 'Meeting') }}">
+            <input name="meeting_title" value="{{ old('meeting_title', $draft?->input_json['meeting_title'] ?? 'Meeting') }}">
           </div>
           <div class="col">
             <label>Date</label>
-            <input name="date" required value="{{ old('date', $draft?->input_json['meeting_datetime'] ?? date('Y-m-d')) }}">
+            <input name="date" value="{{ old('date', $draft?->input_json['meeting_datetime'] ?? date('Y-m-d')) }}">
           </div>
           <div class="col">
             @php $finalTone = old('tone', 'formal'); @endphp
             <label>Tone</label>
-            <select name="tone" required>
+            <select name="tone">
               <option value="formal" @if($finalTone === 'formal') selected @endif>Formal</option>
               <option value="executive" @if($finalTone === 'executive') selected @endif>Executive</option>
               <option value="neutral" @if($finalTone === 'neutral') selected @endif>Neutral</option>

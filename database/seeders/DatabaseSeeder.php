@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             ConfigSeeder::class,
+            ProjectManagementDemoSeeder::class,
             WorkflowSeeder::class,
             DirectorySeeder::class,
             SampleDataSeeder::class,

@@ -24,8 +24,8 @@ return [
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
-        'model_fast' => env('GEMINI_MODEL_FAST', 'gemini-2.5-flash'),
-        'model_pro' => env('GEMINI_MODEL_PRO', 'gemini-2.5-flash'),
+        'model_fast' => env('GEMINI_MODEL_FAST', 'gemini-2.5-pro'),
+        'model_pro' => env('GEMINI_MODEL_PRO', 'gemini-2.5-pro'),
         'temperature' => (float) env('GEMINI_TEMPERATURE', 0.3),
         'max_tokens' => (int) env('GEMINI_MAX_TOKENS', 1200),
         'verify' => (bool) env('GEMINI_VERIFY_SSL', true),

@@ -28,7 +28,7 @@ class TaskController extends Controller
             return redirect()->back()->withErrors([$e->getMessage()])->withInput();
         }
 
-        return redirect()->route('admin.projects.workflow', $project)->with('status', 'Task added');
+        return redirect()->route('admin.projects.developer_assign', $project)->with('status', 'Task added');
     }
 
     public function update(TaskRequest $request, int $project, int $module, int $task): RedirectResponse
@@ -52,7 +52,7 @@ class TaskController extends Controller
             return $redirect->withErrors([$e->getMessage()])->withInput();
         }
 
-        return redirect()->route('admin.projects.workflow', $project)->with('status', 'Task updated');
+        return redirect()->route('admin.projects.developer_assign', $project)->with('status', 'Task updated');
     }
 
     public function destroy(int $project, int $module, int $task): RedirectResponse
@@ -61,6 +61,6 @@ class TaskController extends Controller
         $model = Task::where('project_module_id', $moduleModel->id)->findOrFail($task);
         $this->workflow->deleteTask($model);
 
-        return redirect()->route('admin.projects.workflow', $project)->with('status', 'Task removed');
+        return redirect()->route('admin.projects.developer_assign', $project)->with('status', 'Task removed');
     }
 }

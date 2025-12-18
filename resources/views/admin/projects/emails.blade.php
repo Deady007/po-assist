@@ -6,12 +6,9 @@
       <h1>Emails — {{ $project->name }}</h1>
       <p class="muted">Phase 4 will deepen this. For now, view scoped templates and recent outputs.</p>
     </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      <a class="btn secondary" href="{{ route('admin.projects.show', $project->id) }}">Overview</a>
-      <a class="btn secondary" href="{{ route('admin.projects.workflow', $project->id) }}">Workflow</a>
-      <a class="btn secondary" href="{{ route('admin.projects.tasks', $project->id) }}">Tasks</a>
-    </div>
   </div>
+
+  @include('admin.projects._subnav', ['project' => $project])
 
   <div class="card stacked">
     <div class="section-title">Templates in scope</div>

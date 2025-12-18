@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ModuleTemplateController;
 use App\Http\Controllers\Api\ProjectModuleController as ApiProjectModuleController;
@@ -97,6 +98,17 @@ Route::middleware(['api', 'jwt.auth'])->group(function () {
     Route::get('/dashboards/product', [DashboardController::class, 'product'])->middleware('role:Admin,PM,Developer,Viewer');
     Route::get('/dashboards/tasks', [DashboardController::class, 'tasks'])->middleware('role:Admin,PM,Developer,Viewer');
 
+    Route::prefix('ai')->middleware('role:Admin,PM,Developer')->group(function () {
+        Route::post('/product-update', [AiController::class, 'productUpdate']);
+        Route::post('/meeting-schedule', [AiController::class, 'meetingSchedule']);
+        Route::post('/mom/draft', [AiController::class, 'momDraft']);
+        Route::post('/mom/refine', [AiController::class, 'momRefine']);
+        Route::post('/mom/final-email', [AiController::class, 'momFinalEmail']);
+        Route::post('/hr-update', [AiController::class, 'hrUpdate']);
+        Route::post('/validation-exec-summary', [AiController::class, 'validationExecSummary']);
+        Route::post('/rfp-requirements-extract', [AiController::class, 'rfpRequirementsExtract']);
+    });
+
     Route::get('/search', SearchController::class);
 });
 
@@ -126,6 +138,7 @@ Route::middleware('api')->group(function () {
         Route::delete('/requirements/{id}', [RequirementsController::class, 'destroy']);
         Route::post('/rfp-documents/upload', [RfpDocumentsController::class, 'upload']);
         Route::post('/rfp-documents/link', [RfpDocumentsController::class, 'link']);
+        Route::post('/rfp-documents/{rfpDocumentId}/extract', [RfpDocumentsController::class, 'extractRequirements']);
 
         // Data items
         Route::get('/data-items', [DataItemsController::class, 'index']);

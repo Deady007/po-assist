@@ -18,10 +18,13 @@
             <input name="project_code" value="{{ old('project_code', $project->project_code) }}" placeholder="Auto if blank">
           </div>
           <div>
-            <label>Client</label>
+            <label>Customer</label>
             <select name="client_id" required>
-              @foreach($clients as $client)
-                <option value="{{ $client->id }}" @selected(old('client_id', $project->client_id) == $client->id)>{{ $client->name }} ({{ $client->client_code }})</option>
+              <option value="">Select customer</option>
+              @foreach($customers as $customer)
+                <option value="{{ $customer['client_id'] }}" @selected(old('client_id', $project->client_id) == $customer['client_id'])>
+                  {{ $customer['name'] }} ({{ $customer['code'] }})
+                </option>
               @endforeach
             </select>
           </div>
